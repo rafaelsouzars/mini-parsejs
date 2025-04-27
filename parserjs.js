@@ -41,14 +41,18 @@ const GRAMMAR = {
     9
   ],
   "operators": {
+	"op_atr": "=",
     "op_adc": "+",
     "op_sub": "-",
     "op_mul": "*",
     "op_div": "/",
-    "op_equ": "==",
-    "op_max": ">",
-    "op_min": "<",
-	"op_atr": "="
+	"op_equ": "==",
+    "op_maj": ">",
+    "op_min": "<",	
+	"op_mje": ">=",
+	"op_mne": "<=",
+	"op_nte": "!=",
+	"op_not": "!",
   },
   // Delimitadores
   "delimiters": {
@@ -72,7 +76,7 @@ const GRAMMAR = {
   console.log(key, value)
 }*/
 
-const inputString = "if(a==b){function test();return69.99+66.89}"; // Código de entrada
+const inputString = "function test() { if (a==b!=c<=d) {return a+2.88} }"; // Código de entrada
 const lexers = []; // Array para armazenar lexemas
 const numbers = Object.entries(
 						GRAMMAR['numbers']
@@ -119,7 +123,7 @@ for (const [id,char] of Object.entries(inputString)) {//isNaN(Number(char))
 		charBuffer = ''	
 	} 	
   }
-  else if (/^[\)\(\{\}\[\]\.\=\+\-\*\:\;\,\s]/gm.test(char)) {	
+  else if (/^[\)\(\{\}\[\]\.\:\;\,\s\=\+\-\*\%\|\!\<\>\\]/gm.test(char)) {	
 	
 	if (operators.includes(char)||delimiters.includes(char)||/\s/.test(char)&&!'') {				
 		if (/\./.test(char)&&isNaN(Number(lexers[lexers.length-1]))) {
@@ -128,17 +132,17 @@ for (const [id,char] of Object.entries(inputString)) {//isNaN(Number(char))
 			charBuffer = ''	
 			lexers[lexers.length-1] += char
 			//console.log("dot: ", char, " lexer-1: ", lexers[lexers.length-1])
-		} 
+		}
+		else if (/\=/.test(char)&&/^[\=\>\<\!]/.test(lexers[lexers.length-1])) {
+			lexers[lexers.length-1] += char
+		}
 		else {
 			lexers.push(charBuffer)		
 			lexers.push(char)
 			charBuffer = ''	
 		}		
 	} 
-  }
-  else if (/^[\=\+\-\*\%\|\\]/gm.test(char)) {
-	console.log('Operador: ', char)  
-  }
+  }  
   else if (/^[0-9]/gm.test(char)) { 		
 		// Verifica se o caracter é numeral		
 		if (numbers.includes(Number(char))&&!operators.includes(char)&&!delimiters.includes(char)&&!/\s/.test(char)&&!''){
@@ -167,26 +171,26 @@ for (const [id,char] of Object.entries(inputString)) {//isNaN(Number(char))
 }
 
 tokens = lexers.filter(
-			l => {
-				return (l!=" "&&l!="")
+			whiteSpace => {
+				return (whiteSpace!=" "&&whiteSpace!="")
 			}
 		).map(
-			(v,i) => {
-			  if(GRAMMAR['reserved_words'].includes(v)){
+			(lexer,index) => {
+			  if(GRAMMAR['reserved_words'].includes(lexer)){
 				//return {'reserved_word': v}
-				return JSON.parse(`{"rw_${v}" : "${v}"}`)
-			  } else if(delimiters.includes(v)){
-						return {"delimiter": v}
-			  } else if (operators.includes(v)){
-						let tk
+				return JSON.parse(`{"rw_${lexer}" : "${lexer}"}`)
+			  } else if(delimiters.includes(lexer)){
+						return {"delimiter": lexer}
+			  } else if (operators.includes(lexer)){
+						let token
 						Object.entries(GRAMMAR['operators']).forEach(([key,value])=>{
-							if(v==value) tk = key
+							if(lexer==value) token = key
 						  })
-						return JSON.parse(`{"${tk}" : "${v}"}`)
-			  } else if(/^\d/.test(Number(v))){
-						return {"literal_number": v}
+						return JSON.parse(`{"${token}" : "${lexer}"}`)
+			  } else if(/^\d/.test(Number(lexer))){
+						return {"literal_number": lexer}
 			  } else {
-				return {"identifier": v}
+				return {"identifier": lexer}
 			  }
 			}
 );
