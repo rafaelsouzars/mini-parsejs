@@ -22,7 +22,10 @@ const GRAMMAR = {
     "extends",
     "abstract",
     "static",
-	"return"
+	"return",
+	"try",
+	"catch",
+	"finally"
   ],
   // Numeros
   "numbers": [
@@ -59,9 +62,9 @@ const GRAMMAR = {
     "dot": ".",
     "colon": ":",
     "semicolon": ";",
-    "quotation": "\""
-	/*"white_space": " "
-	"empty": ""*/
+    "quotation": "\"",
+	"white_space": " "
+	/*"empty": ""*/
   }
 }
 
@@ -100,7 +103,7 @@ let charBuffer = new String();
 // Itera os caracteres do código de entrada
 for (const [id,char] of Object.entries(inputString)) {//isNaN(Number(char))
   // Verifica se o caracter é alfabético
-  if (/[a-zA-Z]/gm.test(char)||/\)\(\{\}\[\]\.\=\+\-\*\:\;\,\\/gm.test(char)) {
+  if (/[a-zA-Z]/gm.test(char)) {	  
 	// Se o buffer não contém nenhuma palavra reservada então continua-se adicionando caracteres
 	if (!GRAMMAR['reserved_words'].includes(charBuffer)&&!operators.includes(char)&&!delimiters.includes(char)&&!/\s/.test(char)) {
 		// Verifica se o buffer contem um literal_number para inserir no array de lexemas
@@ -114,17 +117,29 @@ for (const [id,char] of Object.entries(inputString)) {//isNaN(Number(char))
 		// 
 		lexers.push(charBuffer)			
 		charBuffer = ''	
+	} 	
+  }
+  else if (/^[\)\(\{\}\[\]\.\=\+\-\*\:\;\,\s]/gm.test(char)) {	
+	
+	if (operators.includes(char)||delimiters.includes(char)||/\s/.test(char)&&!'') {				
+		if (/\./.test(char)&&isNaN(Number(lexers[lexers.length-1]))) {
+			lexers.push(charBuffer)
+			//lexers.push(char)
+			charBuffer = ''	
+			lexers[lexers.length-1] += char
+			//console.log("dot: ", char, " lexer-1: ", lexers[lexers.length-1])
+		} 
+		else {
+			lexers.push(charBuffer)		
+			lexers.push(char)
+			charBuffer = ''	
+		}		
 	} 
-	else if (operators.includes(char)||delimiters.includes(char)&&!/\s/.test(char)&&!'') {				
-		lexers.push(charBuffer)		
-		lexers.push(char)
-		charBuffer = ''			
-	} 
-	else if (/\s/.test(char)) {
-		//		
-	}
-  }  
-  else { 
+  }
+  else if (/^[\=\+\-\*\%\|\\]/gm.test(char)) {
+	console.log('Operador: ', char)  
+  }
+  else if (/^[0-9]/gm.test(char)) { 		
 		// Verifica se o caracter é numeral		
 		if (numbers.includes(Number(char))&&!operators.includes(char)&&!delimiters.includes(char)&&!/\s/.test(char)&&!''){
 			// Verifica se o buffer contem uma palavra reservada ou identificador para inserir no array de lexemas
@@ -141,31 +156,12 @@ for (const [id,char] of Object.entries(inputString)) {//isNaN(Number(char))
 				charBuffer += char
 			}
 			//lexers.push(char)
-		} 
-		else if (operators.includes(char)||delimiters.includes(char)&&!/\s/.test(char)&&!'') {			
-				 
-			if (/\./.test(char)&&isNaN(Number(lexers[lexers.length-1]))) {
-				lexers.push(charBuffer)
-				//lexers.push(char)
-				charBuffer = ''	
-				lexers[lexers.length-1] += char
-				//console.log("dot: ", char, " lexer-1: ", lexers[lexers.length-1])
-			} 
-			else {
-				lexers.push(charBuffer)		
-				lexers.push(char)
-				charBuffer = ''	
-			}			
-				
-		} 
+		} 		
 		else if(/\s/.test(char)) {			
 			if (charBuffer.length>0) {				
 				lexers.push(charBuffer)
 				charBuffer = ''				
 			}		
-		} 
-		else {
-			
 		}		
   }  
 }
