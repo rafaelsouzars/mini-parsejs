@@ -46,126 +46,140 @@ const LEXERS = {
     8,
     9
   ],
-  "operators": {
-	"op_atr": "=",
-	"op_adc": "+",
-	"op_sub": "-",
-	"op_mul": "*",
-	"op_div": "/",
-	"op_equ": "==",
-	"op_maj": ">",
-	"op_min": "<",	
-	"op_mje": ">=",
-	"op_mne": "<=",
-	"op_nte": "!=",
-	"op_not": "!",
-  },
+  "operators": [
+	"=",
+	"+",
+	"-",
+	"*",
+	"/",
+	"==",
+	">",
+	"<",	
+	">=",
+	"<=",
+	"!=",
+	"!",
+	"===",
+	"+=",
+	"-=",
+	"@",
+	"?",
+	"#",
+	"$",
+  ],
   // Delimitadores
-  "delimiters": {
-	"left_parent": "\(",
-	"right_parent": "\)",
-	"left_square": "\[",
-	"right_square": "\]",
-	"left_curly": "\{",
-	"right_curly": "\}",
-	"comma": ",",
-	"dot": ".",
-	"colon": ":",
-	"semicolon": ";",
-	"quotation": "\"",
-	"white_space": " ",
-	"new_line": "\n"
+  "delimiters": [
+	"\(",
+	"\)",
+	"\[",
+	"\]",
+	"\{",
+	"\}",
+	",",
+	".",
+	":",
+	";",
+	"\"",
+	"\'",
+	"/",
+	"/*",
+	"*/",
+	"\/\/",
+	"`",
+	" ",
+	"\n"
 	/*"empty": ""*/
-  }
+  ]
 }
-
-// Array constantes globais para manipulação dos lexemas
-const numbers = Object.entries(
-						LEXERS['numbers']
-					).map(
-						(v,i) => {
-							return v[1]
-						}
-					);
-const delimiters = Object.entries(
-						LEXERS['delimiters']
-					).map(
-						(v,i) => {
-							return v[1]
-						}
-					);
-
-const operators = Object.entries(
-						LEXERS['operators']
-					).map(
-						(v,i) => {
-							return v[1]
-						}
-					);
 					
-const inputString = `let array arr = []
-arr = {0,1,2,3,4}` // Código de entrada
+const inputCode = `function teste () {return \$\`{teste}\`}` // Código de entrada
 const lexers = [] // Array para armazenar lexemas
 
 // Variáveis globais
 let token = []
 let charBuffer = new String() // Buffer de caracteres
 let readLiteralState = false // Flag para indicar leitura de literal
+let readCommentState = false
+
+// Funções
+function lexSearchList(obj, searchBuffer) {
+	return obj.map(
+				(ele, idx) => {
+						if (ele.indexOf(searchBuffer, 0)==0) {
+							//console.log('ele: ', ele , ' substring: ' ,ele.substring(0, charBuffer.length) , ' index: ', ele.substring(0, charBuffer.length).indexOf(charBuffer, 0))
+							return ele
+						}
+					}).filter(
+						(arr) => {
+							//console.log('arr: ',arr)
+							return (arr!=undefined)
+						}) 
+}
 
 // Itera os caracteres do código de entrada
-for (const [id,char] of Object.entries(inputString)) {
+for (const [index,character] of Object.entries(inputCode)) {
 	
 	// Testa os caracteres alfabéticos
-	if (/[a-zA-Z]/gm.test(char)) {		  
+	if (/[a-zA-Z]/gm.test(character)) {		  
 		// Se o buffer não contém nenhuma palavra reservada então continua-se adicionando caracteres
-		if (!LEXERS['reserved_words'].includes(charBuffer)&&!readLiteralState) {
+		if (!LEXERS['reserved_words'].includes(charBuffer)) {
 			//	
-			charBuffer += char		
+			charBuffer += character
+			//console.log(lexSearchList(LEXERS['reserve_words'], charBuffer))		
 		}		
 		else if (LEXERS['reserved_words'].includes(charBuffer)&&!readLiteralState) {
 			//		
 			lexers.push(charBuffer)			
 			charBuffer = ''	
-		}
-		else if (readLiteralState) {
-			lexers[lexers.length-1] += char
-		} 	
+		}			
 	}
 	  
 	// Testa os operadores e delimitadores
-	else if (/^[\)\(\{\}\[\]\.\:\;\,\s\n\t\=\+\-\*\%\|\!\<\>\"\'\\]/gm.test(char)) {	
-		// Testa o caractere '.' para analisar se faz parte de um numero real	
-		if (/\./.test(char)) {//
+	if (/^[\)\(\{\}\[\]\.\:\;\,\@\#\$\?\s\n\t\=\+\-\*\%\|\!\<\>\`\"\'\/\\]/gm.test(character)) {	
+		// Testa o caractere '.' para analisar se faz parte de um numero real		
+		if (/\./.test(character)) {//
 			lexers.push(charBuffer)
 			charBuffer = ''
 			if (!isNaN(Number(lexers[lexers.length-1]))) {			
-				lexers[lexers.length-1] += char
+				lexers[lexers.length-1] += character
 			}			
 		}
 		// Testa o caractere 'igual' para analisar se é uma igualdade ou atribuição
-		else if (/\=/.test(char)&&/^[\=\>\<\!]/.test(lexers[lexers.length-1])) {
-			lexers[lexers.length-1] += char
+		else if (/\=/.test(character)&&/^[\=\>\<\!\+\-]/.test(lexers[lexers.length-1])) {			
+			lexers[lexers.length-1] += character			
 		}
+		// Testa o caractere 'igual' para analisar se é uma igualdade ou atribuição
+		else if (((/\//.test(character)||/\*/.test(character))&&/\//.test(lexers[lexers.length-1]))||(/\//.test(character)&&/\*/.test(lexers[lexers.length-1]))) {			
+			lexers[lexers.length-1] += character
+			if (lexers[lexers.length-1]=="\/\/") {
+				readCommentState = !readCommentState
+				console.log(readCommentState)
+			}			
+		}		
 		// Testa os caracteres de aspas para identificar e armazenar uma constante literal
-		else if (/^[\"\']/.test(char)) {
+		else if (/^[\"\']/.test(character)) {
 			if (!readLiteralState) {
 				if (charBuffer.length > 0) {
 					lexers.push(charBuffer)
 					charBuffer = ''
 				}					
-				lexers.push(char)			
+				lexers.push(character)			
 				readLiteralState = !readLiteralState			
 			}
 			else {
-				lexers[lexers.length-1] += char			
+				//lexers[lexers.length-1] += character
+				charBuffer += character
+				lexers[lexers.length-1] += charBuffer
+				charBuffer = ''
 				readLiteralState = !readLiteralState
 			}
 			
 		}
 		// Testa um espaço em branco e adiciona regras para armazenamento e limpeza do buffer de leitura
-		else if(/\s/.test(char)) {		
+		else if(/\s/.test(character)) {		
 			if (readLiteralState) {
-				lexers[lexers.length-1] += char
+				//lexers[lexers.length-1] += character
+				charBuffer += character
 			}
 			else {
 				if (charBuffer.length > 0) {
@@ -175,29 +189,42 @@ for (const [id,char] of Object.entries(inputString)) {
 			}				
 		}
 		// Testa se não é uma nova linha ou tabulação
-		else if (!/^[\n\t]/.test(char)&&char!==''){		
+		else if (!/^[\n\t]/.test(character)&&character!=='') {		
 			if (charBuffer.length > 0) {
 				lexers.push(charBuffer)
-				charBuffer = ''
+				charBuffer = ''				
 			}		
-			lexers.push(char)
-		}		 
+			lexers.push(character)
+			//readCommentState = !readCommentState
+			//console.log(readCommentState)
+		}
+		
 	}
 	  
 	// Testa os caracteres numericos
-	else if (/^[0-9]/gm.test(char)) { 		
+	if (/^[0-9]/gm.test(character)) { 		
 		// Verifica se o caracter é numeral		
-		if (numbers.includes(Number(char))){						
+		if (LEXERS['numbers'].includes(Number(character))) {						
 			// Testa se o ultimo elemento do array de lexemas é um number
 			if (!isNaN(Number(lexers[lexers.length-1]))&&/\./gm.test(lexers[lexers.length-1])) {
-				lexers[lexers.length-1] += char							
+				lexers[lexers.length-1] += character							
 			} else {
-				charBuffer += char
-				//lexers.push(char)
+				charBuffer += character	
+				//console.log('number session 1: ', charBuffer)
 			}		
-		}				
-	}	
-
+		}
+		else {
+			//console.log('number session 2: ', charBuffer)
+		} 				
+	}
+	// Testa o final do inputCode
+	if (Object.entries(inputCode).length-1==index)  {
+		if (charBuffer!=''&&charBuffer!=' ') {
+			lexers.push(charBuffer)
+			charBuffer = ''
+		}
+		
+	}
 }
 
 // Filtra e mapea o array de lexemas e gera o array de tokens
@@ -212,7 +239,7 @@ tokens = lexers.filter(
 							return JSON.parse(`{"${lexer}": "${lexer}"}`)
 						}
 						// Gera o token para delimitadores
-						else if(delimiters.includes(lexer)||operators.includes(lexer)){
+						else if(LEXERS['delimiters'].includes(lexer)||LEXERS['operators'].includes(lexer)){
 							return JSON.parse(`{"${lexer}": "${lexer}"}`)
 						}
 						// Gera o token para numeros
@@ -231,7 +258,7 @@ tokens = lexers.filter(
 				);
 
 // Entrada
-console.log("Input: ", inputString)
+console.log("Input: ", inputCode)
 // Lexemas
 console.log("Lexers: ", lexers)
 // Saída
